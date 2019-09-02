@@ -2,11 +2,12 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-
+using System.IO;
+using System.Xml;
 public class AppConst
 {
 #if UNITY_STANDALONE
-    public static string OS = "pc";
+        public static string OS = "pc";
 #elif UNITY_ANDROID
         public static string OS = "android";
 #elif UNITY_IOS
@@ -32,31 +33,37 @@ public class AppConst
 
     public const bool LuaByteMode = false;                      //Lua字节码模式-默认关闭 
     public const bool LuaBundleMode = true;                   //Lua代码AssetBundle模式
+
     public const int  TimerInterval = 1;
     public const int  GameFrameRate = 30;                         //游戏帧频
-    public const string AppName = "TheRediscoveryOfMan";        //应用程序名称
-    public const string LuaTempDir = "Lua/";                     //临时目录
-    public const string AppPrefix = AppName + "_";               //应用程序前缀
-    public const string ExtName = ".unity3d";                    //素材扩展名
-    public const string AssetDir = "StreamingAssets";            //素材目录 
 
+    public const string AppName = "TheRediscoveryOfMan";   //应用程序名称
+    public const string LuaTempDir = "Lua/";                             //临时目录
+    public const string AppPrefix = AppName + "_";                  //应用程序前缀
+    public const string ExtName = ".unity3d";                             //素材扩展名
+    public const string AssetDir =  "StreamingAssets";               //素材目录 
     public const string WebUrl = "http://localhost:6688/";         //测试更新地址
 
     public const string VerionName = "version.txt";                      //版本管理文件名
-    public const string PatchName = "pversion.txt";                      //补丁管理文件名
-    public const string PatchAsset = "patch.ab";                         //补丁包名
-    public const string AssetRoot = "Assets/TheRediscoveryOfMan/Assets/";   //素材路径
+    public const string PatchName =  "pversion.txt";                    //补丁管理文件名
+    public const string PatchAsset =   "patch.ab";                         //补丁包名
+    public const string AssetRoot =    "Assets/TheRediscoveryOfMan/Assets/";   //素材路径
+    public const string LuaRoot = AssetRoot + "Lua";                  //Lua路径
+    public const string ToluaRoot = "Assets/TheRediscoveryOfMan/ToLua";
 
-    public static string ConfigURI = "";                                 //配置文件地址，setting.xml读取覆盖
+
+    public static string ConfigURI = "";                                //配置文件地址，setting.xml读取覆盖
     public static string AssetURI = "";                                  //资源更新地址，config.txt读取覆盖
-    public static string AppVersion = "";                                //游戏版本号，setting.xml读取覆盖
-    public static string AppIdentifer ="";                               //APP  bundle  ID
-    public static string AppChannel ="";                                 //渠道标识
-    public static bool   IsVerify = false;                               //是否提审
-    public static int    SocketPort = 0;                                 //Socket服务器端口
-    public static string SocketAddress = string.Empty;                   //Socket服务器地址
+    public static string AppVersion = "";                              //游戏版本号，setting.xml读取覆盖
+    public static string AppIdentifer ="";                             //APP  bundle  ID
+    public static string AppChannel ="";                              //渠道标识
+
+    public static bool   IsVerify = false;                                 //是否提审
+    public static int      SocketPort = 0;                                   //Socket服务器端口
+    public static string SocketAddress = string.Empty;          //Socket服务器地址
 
     public static string ABNAME ="First";
+
     public static string ConfigPath
     {
         get { return ConfigURI + AppVersion + "/config.txt"; }    // 配置文件地址 + 版本号
@@ -86,5 +93,29 @@ public class AppConst
     {
         get { return Application.streamingAssetsPath + "/" + ABNAME; }
     }
- 
+
+    //AB包输出路径
+    public static string OUTPUT_ROOT
+    {
+        get
+        {
+            if (string.IsNullOrEmpty(AppVersion))
+            {
+                byte[] bytes = File.ReadAllBytes(AppConst.SettingPath);
+                MemoryStream stream = new MemoryStream(bytes);
+                XmlTextReader reader = new XmlTextReader(stream);
+                while (reader.Read())
+                {
+                    if (reader.NodeType == XmlNodeType.Element && reader.Name == "setting")
+                    {
+                        AppVersion = reader.GetAttribute("version");
+                        break;
+                    }
+                }
+                reader.Close();
+                stream.Close();
+            }
+            return AssetRoot + AppVersion + "/ab/" + AppConst.OS + "/";
+        }
+    }
 }

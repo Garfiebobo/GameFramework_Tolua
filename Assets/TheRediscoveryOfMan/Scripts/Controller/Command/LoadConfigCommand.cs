@@ -64,5 +64,5 @@ public class LoadConfigCommand : ControllerCommand {
         }
         reader.Close();
         stream.Close();
-    }
+    }     
 }
