@@ -54,6 +54,15 @@ public class Util
         return (long)ts.TotalMilliseconds;
     }
 
+    //计算物体大小
+    public static long filesize(string file)
+    {
+        FileStream fs = new FileStream(file, FileMode.Open);
+        long size = fs.Length;
+        fs.Close();
+        return size;
+    }
+
     /// <summary>
     /// 搜索子物体组件-GameObject版
     /// </summary>

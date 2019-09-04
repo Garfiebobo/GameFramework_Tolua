@@ -14,6 +14,9 @@ public class PackagerTool : ScriptableObject
     public static string PATCH_CONFIG_PATH = "Assets/TheRediscoveryOfMan/Editor/Config/PatchConfig.txt"; // ≤π∂°≈‰÷√¬∑æ∂
     public static string LUA_CONFIG_PATH = "Assets/TheRediscoveryOfMan/Editor/Config/LuaConfig.txt";         //Lua≈‰÷√¬∑æ∂
 
+
+    public static string AB_EXTENSION = ".ab";
+    public static string AB_MANIFESET = "index" + AB_EXTENSION;
     // make the lua file bytes  mode:0 ≤ª”√byte  32 luajit32  64 luajit 64
     private static void LuaByteFiles(string path, string root, int mode = 0)
     {
@@ -80,6 +83,52 @@ public class PackagerTool : ScriptableObject
         Directory.SetCurrentDirectory(currDir);
     }
 
+    // build version file
+    private static void BuildVersionFile(string path, string output, Dictionary<string, bool> patch, List<AssetBundleBuild> buildmap)
+    {
+        string content = string.Empty;
+        for (int i = 0; i < buildmap.Count; i++)
+        {
+            string abname = buildmap[i].assetBundleName;
+            if (patch.ContainsKey(abname)) //is patch version control
+                continue;
+
+            if (content != string.Empty) content += "\n";
+            string filename = output + abname;
+            content += abname + "|" + Util.md5file(filename) + "|" + Util.filesize(filename);
+        }
+        File.WriteAllText(path, content);
+    }
+
+    //compare    ab 
+    private static void CompareManifestFile(AssetBundleManifest last, AssetBundleManifest now)
+    {
+        if (last == null || now == null)
+            return;
+
+        List<string> abnames1 = new List<string>(last.GetAllAssetBundles());
+        List<string> abnames2 = new List<string>(now.GetAllAssetBundles());
+        for (int i = 0; i < abnames1.Count; i++)
+        {
+            if (abnames2.IndexOf(abnames1[i]) == -1) //delete
+                UnityEngine.Debug.Log("Delete AssetBundle: " + abnames1[i]);
+        }
+        for (int i = 0; i < abnames2.Count; i++)
+        {
+            if (abnames1.IndexOf(abnames2[i]) == -1) //add
+            {
+                UnityEngine.Debug.Log("Add AssetBundle: " + abnames2[i]);
+                continue;
+            }
+
+            //check change
+            Hash128 hash1 = last.GetAssetBundleHash(abnames2[i]);
+            Hash128 hash2 = now.GetAssetBundleHash(abnames2[i]);
+            if (!hash1.Equals(hash2))
+                UnityEngine.Debug.Log("Change AssetBundle: " + abnames2[i]);
+        }
+    }
+
     // build asset config
     private static void BuildAssetConfig(string path, List<AssetBundleBuild> buildmap)
     {
@@ -89,6 +138,47 @@ public class PackagerTool : ScriptableObject
         build.assetNames = new string[] { path };
         buildmap.Add(build);
     }
+
+
+    // build lua config
+    private static void BuildLuaConfig(string path, List<AssetBundleBuild> buildmap)
+    {
+        string content = string.Empty;
+        for (int i = 0; i < buildmap.Count; i++)
+        {
+            if (!buildmap[i].assetBundleName.StartsWith("lua"))
+                continue;
+
+            if (content != string.Empty) content += "\n";
+            content += buildmap[i].assetBundleName;
+        }
+        File.WriteAllText(path, content);
+
+        //add to build
+        string abname = Path.GetFileNameWithoutExtension(path).ToLower();
+        AssetBundleBuild build = new AssetBundleBuild();
+        build.assetBundleName = abname + AB_EXTENSION;
+        build.assetNames = new string[] { path };
+        buildmap.Add(build);
+    }
+
+
+    // build patch version file
+    private static void BuildPatchFile(string path, string output, Dictionary<string, bool> patch, List<AssetBundleBuild> buildmap)
+    {
+        string content = string.Empty;
+        for (int i = 0; i < buildmap.Count; i++)
+        {
+            string abname = buildmap[i].assetBundleName;
+            if (!patch.ContainsKey(abname)) //not patch version control
+                continue;
+
+            if (content != string.Empty) content += "\n";
+            content += abname + "|" + Util.md5file(output + abname);
+        }
+        File.WriteAllText(path, content);
+    }
+
 
     [MenuItem("RediscoveryOfMan/Build AssetBundles", false, 100)]
     public static List<AssetBundleBuild> PackAssetBundles()
@@ -139,13 +229,13 @@ public class PackagerTool : ScriptableObject
         }
 
         if (!Directory.Exists(AppConst.OUTPUT_ROOT)) Directory.CreateDirectory(AppConst.OUTPUT_ROOT);
-        PackagerTool.BuildAssetConfig(ASSET_CONFIG_PATH, buildmap);
+        PackagerTool.BuildAssetConfig(ASSETS_CONFIG_PATH, buildmap);
         PackagerTool.BuildLuaConfig(LUA_CONFIG_PATH, buildmap);
         AssetDatabase.Refresh();
 
         //build assetbundles
-        string outputName = Path.GetDirectoryName(OUTPUT_ROOT);
-        string manifestPath = OUTPUT_ROOT + Path.GetFileName(outputName);
+        string outputName = Path.GetDirectoryName(AppConst.OUTPUT_ROOT);
+        string manifestPath = AppConst.OUTPUT_ROOT + Path.GetFileName(outputName);
         AssetBundleManifest last = null;
         if (File.Exists(manifestPath))
         {
@@ -154,13 +244,13 @@ public class PackagerTool : ScriptableObject
             ab.Unload(false);
         }
 
-        AssetBundleManifest now = BuildPipeline.BuildAssetBundles(OUTPUT_ROOT, buildmap.ToArray(),
-            BuildAssetBundleOptions.ChunkBasedCompression,
-            EditorUserBuildSettings.activeBuildTarget);
+        AssetBundleManifest now = BuildPipeline.BuildAssetBundles(AppConst.OUTPUT_ROOT, buildmap.ToArray(),
+        BuildAssetBundleOptions.ChunkBasedCompression,
+        EditorUserBuildSettings.activeBuildTarget);
 
         //copy now manifest file
         FileInfo fileInfo = new FileInfo(manifestPath);
-        fileInfo.CopyTo(OUTPUT_ROOT + AB_MANIFESET, true);
+        fileInfo.CopyTo(AppConst.OUTPUT_ROOT + AB_MANIFESET, true);
 
         //add manifest to version control
         AssetBundleBuild abb = new AssetBundleBuild();
@@ -169,8 +259,8 @@ public class PackagerTool : ScriptableObject
 
         //build version file
         PackagerTool.CompareManifestFile(last, now);
-        PackagerTool.BuildVersionFile(VERSION_PATH, OUTPUT_ROOT, patch, buildmap);
-        PackagerTool.BuildPatchFile(PATCH_PATH, OUTPUT_ROOT, patch, buildmap);
+        PackagerTool.BuildVersionFile(AppConst.VersionRoot, AppConst.OUTPUT_ROOT, patch, buildmap);
+        PackagerTool.BuildPatchFile(AppConst.PatchRoot, AppConst.OUTPUT_ROOT, patch, buildmap);
 
         AssetDatabase.Refresh();
         UnityEngine.Debug.Log("Build assetbundles files finish!!");

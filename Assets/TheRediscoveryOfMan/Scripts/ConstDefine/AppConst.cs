@@ -48,10 +48,13 @@ public class AppConst
     public const string PatchName =  "pversion.txt";                    //补丁管理文件名
     public const string PatchAsset =   "patch.ab";                         //补丁包名
     public const string AssetRoot =    "Assets/TheRediscoveryOfMan/Assets/";   //素材路径
-    public const string LuaRoot = AssetRoot + "Lua";                  //Lua路径
+    public const string LuaRoot = "Assets/TheRediscoveryOfMan/Lua";                  //Lua路径
     public const string ToluaRoot = "Assets/TheRediscoveryOfMan/ToLua";
+    public const string ABRoot = "AssetBundles/";
 
-
+    public static string VersionRoot = OUTPUT_ROOT + "/version.txt";
+    public static string PatchRoot = OUTPUT_ROOT + "/pversion.txt";
+    public static string ABNAME = "First";
     public static string ConfigURI = "";                                //配置文件地址，setting.xml读取覆盖
     public static string AssetURI = "";                                  //资源更新地址，config.txt读取覆盖
     public static string AppVersion = "";                              //游戏版本号，setting.xml读取覆盖
@@ -62,7 +65,7 @@ public class AppConst
     public static int      SocketPort = 0;                                   //Socket服务器端口
     public static string SocketAddress = string.Empty;          //Socket服务器地址
 
-    public static string ABNAME ="First";
+
 
     public static string ConfigPath
     {
@@ -102,6 +105,7 @@ public class AppConst
             if (string.IsNullOrEmpty(AppVersion))
             {
                 byte[] bytes = File.ReadAllBytes(AppConst.SettingPath);
+                Debug.Log(AppConst.SettingPath);
                 MemoryStream stream = new MemoryStream(bytes);
                 XmlTextReader reader = new XmlTextReader(stream);
                 while (reader.Read())
@@ -115,7 +119,7 @@ public class AppConst
                 reader.Close();
                 stream.Close();
             }
-            return AssetRoot + AppVersion + "/ab/" + AppConst.OS + "/";
+            return ABRoot + AppVersion + "/ab/" + AppConst.OS + "/";
         }
     }
 }
